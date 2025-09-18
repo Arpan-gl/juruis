@@ -1,6 +1,7 @@
 import express from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
 
@@ -18,8 +19,9 @@ router.post('/recommend', async (req, res) => {
       abroad: req.body?.abroad || '',
     };
 
-    const baseDir = path.resolve('/Users/anumaanwhig/Desktop/react/jurislatest/jurisai/backend/utills/schemes');
-    const venvPython = path.join(baseDir, '.venv', 'bin', 'python');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const baseDir = path.resolve(__dirname, '../utills/schemes');
     const scriptPath = path.join(baseDir, 'chat_rag.py');
     const indexPath = path.join(baseDir, 'scheme_indices_eligibility_index');
 
@@ -36,7 +38,9 @@ router.post('/recommend', async (req, res) => {
       env.GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     }
 
-    const child = spawn(venvPython, args, { env, cwd: baseDir });
+    const pythonExe = process.env.PYTHON || 'python';
+    // Use direct process spawn without shell to avoid Windows path/space issues
+    const child = spawn(pythonExe, args, { env, cwd: baseDir });
     let output = '';
     let errorOutput = '';
 

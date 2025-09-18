@@ -47,7 +47,7 @@
         }
         
         // Send the file to the API endpoint using axios
-        const response = await axios.post('/analyze', formData, {
+        const response = await axios.post('/smart-contract-analysis/analyze', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },

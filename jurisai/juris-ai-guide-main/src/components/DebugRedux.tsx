@@ -16,7 +16,7 @@ const DebugRedux = () => {
 
   return (
     <div className="fixed top-4 right-4 bg-black text-white p-4 rounded-lg z-50 max-w-sm">
-      <h3 className="font-bold mb-2">Redux Debug Info</h3>
+      {/* <h3 className="font-bold mb-2">Redux Debug Info</h3>
       <div className="text-xs space-y-1">
         <div><strong>isLogin:</strong> {isLogin ? 'true' : 'false'}</div>
         <div><strong>User:</strong> {user ? 'exists' : 'null'}</div>
@@ -28,7 +28,7 @@ const DebugRedux = () => {
             <div><strong>ID:</strong> {user._id}</div>
           </>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };

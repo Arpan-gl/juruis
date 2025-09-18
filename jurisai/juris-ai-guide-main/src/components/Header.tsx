@@ -94,6 +94,7 @@ const Header = () => {
         { name: 'AI Lawyer', path: '/ai-lawyer' },
         { name: 'Contract Comparison', path: '/contract-comparison' },
         { name: 'Legal Community', path: '/legal-community' },
+        {name: 'Schemes Advisor', path: '/schemes-advisor'}
       ]
     },
     { name: 'Features', path: '/features' },
