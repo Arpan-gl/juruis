@@ -20,6 +20,7 @@ import HireLawyer from '@/components/HireLawyer';
 import LawyerApplicationStatus from '@/components/LawyerApplicationStatus';
 import { useToast } from '@/components/ui/use-toast';
 import axios from '../axios';
+import Header from '@/components/Header';
 
 interface User {
   _id: string;
@@ -42,6 +43,9 @@ const LegalCommunity = () => {
   const [issues, setIssues] = useState<any[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recs, setRecs] = useState<any[] | null>(null);
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [storyDraft, setStoryDraft] = useState('');
 
   useEffect(() => {
     fetchUserProfile();
@@ -79,6 +83,23 @@ const LegalCommunity = () => {
   const handleResponseSelected = (response: any) => {
     setSelectedResponse(response);
     setActiveTab('hire');
+  };
+
+  const fetchRecommendations = async () => {
+    try {
+      setRecsLoading(true);
+      setRecs(null);
+      const response = await axios.post('/lawyers/recommend', { story: storyDraft || selectedIssue?.description || '' });
+      if (response.data?.success) {
+        setRecs(response.data.recommendations || []);
+      } else {
+        setRecs([]);
+      }
+    } catch (e) {
+      setRecs([]);
+    } finally {
+      setRecsLoading(false);
+    }
   };
 
   const getLawyerStatusIcon = (status: string) => {
@@ -173,109 +194,190 @@ const LegalCommunity = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-center mb-4">Legal Community</h1>
-        <p className="text-center text-muted-foreground">
-          Connect with legal professionals and get answers to your legal questions
-        </p>
-        
-        {/* User Role Badge */}
-        <div className="flex justify-center mt-4">
-          <Badge variant="outline" className="flex items-center gap-2">
-            {user?.role === 'lawyer' ? (
-              <>
-                <Briefcase className="h-4 w-4" />
-                Verified Lawyer
-              </>
-            ) : (
-              <>
-                <Users className="h-4 w-4" />
-                Legal Client
-              </>
-            )}
-          </Badge>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-center mb-4">Legal Community</h1>
+          <p className="text-center text-muted-foreground">
+            Connect with legal professionals and get answers to your legal questions
+          </p>
+          
+          {/* User Role Badge */}
+          <div className="flex justify-center mt-4">
+            <Badge variant="outline" className="flex items-center gap-2">
+              {user?.role === 'lawyer' ? (
+                <>
+                  <Briefcase className="h-4 w-4" />
+                  Verified Lawyer
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4" />
+                  Legal Client
+                </>
+              )}
+            </Badge>
+          </div>
         </div>
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="browse" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Browse Issues
-          </TabsTrigger>
-          <TabsTrigger value="post" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Post Issue
-          </TabsTrigger>
-          {user?.role === 'lawyer' && user.lawyerProfile?.isVerified && (
-            <TabsTrigger value="respond" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Respond
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsTrigger value="browse" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Browse Issues
             </TabsTrigger>
+            <TabsTrigger value="post" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Post Issue
+            </TabsTrigger>
+            {user?.role === 'lawyer' && user.lawyerProfile?.isVerified && (
+              <TabsTrigger value="respond" className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Respond
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="hire" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Hire
+            </TabsTrigger>
+            <TabsTrigger value="recommend" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Recommend Lawyers
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Browse Issues Tab */}
+          <TabsContent value="browse">
+            <LegalIssues onPostIssue={handlePostIssue} onViewIssue={handleViewIssue} />
+          </TabsContent>
+
+          {/* Post Issue Tab */}
+          <TabsContent value="post">
+            <PostIssue onIssuePosted={handleIssuePosted} />
+          </TabsContent>
+
+          {/* Respond Tab (Lawyers Only) */}
+          {user?.role === 'lawyer' && user.lawyerProfile?.isVerified && (
+            <TabsContent value="respond">
+              {selectedIssue ? (
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Responding to Issue
+                      </CardTitle>
+                      <CardDescription>
+                        Provide your legal expertise and approach to this issue
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-4">
+                        <h3 className="font-semibold text-lg mb-2">{selectedIssue.title}</h3>
+                        <p className="text-muted-foreground mb-3">{selectedIssue.description}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary">{selectedIssue.category}</Badge>
+                          <Badge variant="outline">{selectedIssue.urgency}</Badge>
+                          {selectedIssue.budget && (
+                            <Badge variant="outline">Budget: ${selectedIssue.budget}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setSelectedIssue(null)}
+                        className="mb-4"
+                      >
+                        ← Back to Issues
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <LawyerResponse 
+                    issueId={selectedIssue._id}
+                    issueTitle={selectedIssue.title}
+                    onResponseSubmitted={() => {
+                      setSelectedIssue(null);
+                      setActiveTab('browse');
+                    }}
+                    onCancel={() => {
+                      setSelectedIssue(null);
+                      setActiveTab('browse');
+                    }}
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Select an Issue to Respond</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Browse through legal issues and click on one to provide your professional response.
+                    </p>
+                    <Button onClick={() => setActiveTab('browse')}>
+                      Browse Issues
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
           )}
-          <TabsTrigger value="hire" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Hire
-          </TabsTrigger>
-        </TabsList>
 
-        {/* Browse Issues Tab */}
-        <TabsContent value="browse">
-          <LegalIssues onPostIssue={handlePostIssue} onViewIssue={handleViewIssue} />
-        </TabsContent>
-
-        {/* Post Issue Tab */}
-        <TabsContent value="post">
-          <PostIssue onIssuePosted={handleIssuePosted} />
-        </TabsContent>
-
-        {/* Respond Tab (Lawyers Only) */}
-        {user?.role === 'lawyer' && user.lawyerProfile?.isVerified && (
-          <TabsContent value="respond">
-            {selectedIssue ? (
+          {/* Hire Tab */}
+          <TabsContent value="hire">
+            {selectedResponse ? (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Responding to Issue
+                      <Users className="h-5 w-5" />
+                      Hiring Process
                     </CardTitle>
                     <CardDescription>
-                      Provide your legal expertise and approach to this issue
+                      Review the lawyer's response and proceed with hiring
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="mb-4">
-                      <h3 className="font-semibold text-lg mb-2">{selectedIssue.title}</h3>
-                      <p className="text-muted-foreground mb-3">{selectedIssue.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">{selectedIssue.category}</Badge>
-                        <Badge variant="outline">{selectedIssue.urgency}</Badge>
-                        {selectedIssue.budget && (
-                          <Badge variant="outline">Budget: ${selectedIssue.budget}</Badge>
-                        )}
+                      <h3 className="font-semibold text-lg mb-2">Lawyer Response</h3>
+                      <div className="bg-muted p-4 rounded-lg mb-3">
+                        <p className="text-sm">{selectedResponse.content}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Approach:</span> {selectedResponse.approach}
+                        </div>
+                        <div>
+                          <span className="font-medium">Estimated Time:</span> {selectedResponse.estimatedTime}
+                        </div>
+                        <div>
+                          <span className="font-medium">Estimated Cost:</span> ${selectedResponse.estimatedCost}
+                        </div>
+                        <div>
+                          <span className="font-medium">Experience:</span> {selectedResponse.experience} years
+                        </div>
                       </div>
                     </div>
                     <Button 
                       variant="outline" 
-                      onClick={() => setSelectedIssue(null)}
+                      onClick={() => setSelectedResponse(null)}
                       className="mb-4"
                     >
-                      ← Back to Issues
+                      ← Back to Responses
                     </Button>
                   </CardContent>
                 </Card>
                 
-                <LawyerResponse 
-                  issueId={selectedIssue._id}
-                  issueTitle={selectedIssue.title}
-                  onResponseSubmitted={() => {
-                    setSelectedIssue(null);
+                <HireLawyer 
+                  response={selectedResponse}
+                  issue={selectedIssue}
+                  onHireCompleted={() => {
+                    setSelectedResponse(null);
                     setActiveTab('browse');
                   }}
                   onCancel={() => {
-                    setSelectedIssue(null);
+                    setSelectedResponse(null);
                     setActiveTab('browse');
                   }}
                 />
@@ -283,10 +385,10 @@ const LegalCommunity = () => {
             ) : (
               <Card>
                 <CardContent className="pt-6 text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Select an Issue to Respond</h3>
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Select a Response to Hire</h3>
                   <p className="text-muted-foreground mb-4">
-                    Browse through legal issues and click on one to provide your professional response.
+                    Browse through lawyer responses to legal issues and select one to proceed with hiring.
                   </p>
                   <Button onClick={() => setActiveTab('browse')}>
                     Browse Issues
@@ -295,82 +397,55 @@ const LegalCommunity = () => {
               </Card>
             )}
           </TabsContent>
-        )}
 
-        {/* Hire Tab */}
-        <TabsContent value="hire">
-          {selectedResponse ? (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Hiring Process
-                  </CardTitle>
-                  <CardDescription>
-                    Review the lawyer's response and proceed with hiring
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-lg mb-2">Lawyer Response</h3>
-                    <div className="bg-muted p-4 rounded-lg mb-3">
-                      <p className="text-sm">{selectedResponse.content}</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium">Approach:</span> {selectedResponse.approach}
-                      </div>
-                      <div>
-                        <span className="font-medium">Estimated Time:</span> {selectedResponse.estimatedTime}
-                      </div>
-                      <div>
-                        <span className="font-medium">Estimated Cost:</span> ${selectedResponse.estimatedCost}
-                      </div>
-                      <div>
-                        <span className="font-medium">Experience:</span> {selectedResponse.experience} years
-                      </div>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedResponse(null)}
-                    className="mb-4"
-                  >
-                    ← Back to Responses
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              <HireLawyer 
-                response={selectedResponse}
-                issue={selectedIssue}
-                onHireCompleted={() => {
-                  setSelectedResponse(null);
-                  setActiveTab('browse');
-                }}
-                onCancel={() => {
-                  setSelectedResponse(null);
-                  setActiveTab('browse');
-                }}
-              />
-            </div>
-          ) : (
+          {/* Recommend Lawyers Tab */}
+          <TabsContent value="recommend">
             <Card>
-              <CardContent className="pt-6 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Select a Response to Hire</h3>
-                <p className="text-muted-foreground mb-4">
-                  Browse through lawyer responses to legal issues and select one to proceed with hiring.
-                </p>
-                <Button onClick={() => setActiveTab('browse')}>
-                  Browse Issues
-                </Button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  Get Lawyer Recommendations
+                </CardTitle>
+                <CardDescription>Describe your issue briefly and get top matches.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  value={storyDraft}
+                  onChange={(e) => setStoryDraft(e.target.value)}
+                  placeholder="Write your question or case summary..."
+                  className="w-full border rounded p-3 h-28"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={fetchRecommendations} disabled={recsLoading || (!storyDraft && !selectedIssue)}>
+                    {recsLoading ? 'Finding...' : 'Find Lawyers'}
+                  </Button>
+                </div>
+
+                {recs && (
+                  <div className="space-y-3">
+                    {recs.length === 0 && (
+                      <div className="text-sm text-muted-foreground">No recommendations yet.</div>
+                    )}
+                    {recs.map((r: any, idx: number) => (
+                      <Card key={idx} className="border">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{r.name}</div>
+                              <div className="text-sm text-muted-foreground">Score: {r.score?.toFixed?.(3)}</div>
+                              <div className="text-sm">{r.details?.expertise}</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
